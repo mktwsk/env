@@ -1,6 +1,3 @@
 [submodule ".oh-my-zsh"]
 	path = .oh-my-zsh
 	url = git@github.com:ohmyzsh/ohmyzsh.git
-[submodule ".vim/pack/ale"]
-	path = .vim/pack/ale
-	url = git@github.com:dense-analysis/ale.git
