@@ -4,7 +4,8 @@ echo "Sprawdzam distro: "
 DISTRO=$(lsb_release -i | cut -f 2-)
 echo $DISTRO
 
-rsync -a --info=progress2 --no-i-r ~/git/env/.* ~/
+rsync -a --info=progress2 --no-i-r ~/git/env/.vim ~/
+rsync -a --info=progress2 --no-i-r ~/git/env/.oh-my-zsh ~/
 
 
 cp  .vimrc ~/
