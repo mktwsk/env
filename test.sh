@@ -1,6 +1,8 @@
 #!/bin/bash
-if id -u "$1" >/dev/null 2>&1; then
-  echo "user exists"
+#
+if grep -q Logged (gh auth status); then
+	echo "tak"
 else
-  echo "user does not exist"
+	echo "nie"
 fi
+
