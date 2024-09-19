@@ -10,7 +10,7 @@ echo""
 echo " Czynię instalacje preróżne"
 echo""
 
-if [ "$DISTRO" = "Debian" ]; then
+if [ "$DISTRO" = "Kali" ]; then
 	sudo apt install aptitude -y
 	sudo aptitude update -y
 	sudo aptitude upgrade -y
