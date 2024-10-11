@@ -1,81 +1,96 @@
-#!/bin/sh
+#!/bin/bash
 
-GITDIR="/home/$USER/git"
-ENVDIR="/home/$USER/git/env/"
+set -euo pipefail
 
-echo "Sprawdzam distro: "
-DISTRO=$(lsb_release -i | cut -f 2-)
-echo "Oto i ono: "$DISTRO
-echo""
-echo " Czynię instalacje preróżne"
-echo""
+GITDIR="$HOME/git"
+ENVDIR="$GITDIR/env"
 
-if [ "$DISTRO" = "Kali" ]; then
-	sudo apt install aptitude -y
-	sudo aptitude update -y
-	sudo aptitude upgrade -y
-	type -p curl >/dev/null || sudo apt install curl -y
-	curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-	&& sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-	&& echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-	&& sudo aptitude update 
-	sudo aptitude install gh zsh vim git rsync neofetch -y
+echo "Sprawdzam distro:"
+if command -v lsb_release >/dev/null 2>&1; then
+    DISTRO=$(lsb_release -i | cut -f 2-)
 else
-	echo "To nie moje distro"
+    echo "Nie można znaleźć polecenia lsb_release."
+    exit 1
+fi
+echo "Oto i ono: $DISTRO"
+echo ""
+echo "Czynię instalacje preróżne"
+echo ""
+
+if [ "$DISTRO" = "Debian" ]; then
+    if ! command -v sudo >/dev/null 2>&1; then
+        echo "Polecenie sudo nie jest dostępne. Proszę zainstalować sudo."
+        exit 1
+    fi
+    sudo apt update -y
+    sudo apt install -y aptitude curl git rsync neofetch zsh vim
+
+    # Install GitHub CLI
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | \
+        sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    sudo apt update
+    sudo apt install -y gh
+else
+    echo "To nie moje distro"
 fi
 
-
-
-if [ -d "$GITDIR"  ] ; then
-	echo "Jest $GITDIR"
+# Tworzenie katalogu GITDIR, jeśli nie istnieje
+if [ -d "$GITDIR" ]; then
+    echo "Jest $GITDIR"
 else
-	echo "Tworzę $GITDIR"
-	mkdir ~/git
+    echo "Tworzę $GITDIR"
+    mkdir -p "$GITDIR"
 fi
 
-if [ -d "$ENVDIR" ] ; then
-	echo "Jest $ENVDIR"
+# Sprawdzenie i klonowanie ENVDIR
+if [ -d "$ENVDIR" ]; then
+    echo "Jest $ENVDIR"
 else
-	echo "$ENVDIR"
+    echo "Klonowanie $ENVDIR"
 
-	gh auth token |wc -l > /tmp/ghauth
-
-	if grep -q 1 /tmp/ghauth
-	then
-		echo "Zalogowany do GH"
-	else
-		echo "Cza sie zalogować do GH"
-		echo ""
-		gh auth login
-	fi
-	rm /tmp/ghauth
-	gh auth setup-git
-	cd ~/git
-	git clone git@github.com:mktwsk/env.git
+    # Sprawdzenie autentykacji GH
+    if gh auth status >/dev/null 2>&1; then
+        echo "Zalogowany do GH"
+    else
+        echo "Trzeba się zalogować do GH"
+        gh auth login
+    fi
+    gh auth setup-git
+    cd "$GITDIR"
+    git clone git@github.com:mktwsk/env.git
 fi
 
-cd ~/git/env
+cd "$ENVDIR"
 git submodule update --init --recursive
 git submodule update --recursive --remote
 
-echo "Rsync .vim"
-rsync -a --info=progress2 --no-i-r ~/git/env/.vim ~/
-echo "Rsync .oh-my-zsh"
-rsync -a --info=progress2 --no-i-r ~/git/env/.oh-my-zsh ~/
+echo "Synchronizacja .vim"
+rsync -a --info=progress2 --no-i-r "$ENVDIR/.vim" "$HOME/"
+
+echo "Synchronizacja .oh-my-zsh"
+rsync -a --info=progress2 --no-i-r "$ENVDIR/.oh-my-zsh" "$HOME/"
 
 echo "Kopiuję .vimrc"
-cp  -v .vimrc ~/
+cp -v "$ENVDIR/.vimrc" "$HOME/"
+
 echo "Kopiuję .zshrc"
-cp  -v .zshrc ~/
+cp -v "$ENVDIR/.zshrc" "$HOME/"
 
 echo "Ustawiam shell na zsh"
-sudo chsh -s /usr/bin/zsh $USER
-echo "Helptagi dla Vima"
-vim -u NONE -c "helptags fugitive/doc" -c q
+if command -v chsh >/dev/null 2>&1; then
+    sudo chsh -s "$(command -v zsh)" "$USER"
+else
+    echo "Polecenie chsh nie jest dostępne. Nie można zmienić shell'a."
+fi
 
-echo '\n\n'
+echo "Generuję helptagi dla Vima"
+vim -u NONE -c "helptags ALL" -c q
+
+echo -e '\n\n'
 
 neofetch
 
-echo '\n\n'
+echo -e '\n\n'
 echo "Uczynił żem!"
